@@ -27,6 +27,10 @@ H, W = img.shape[:2]
 calib = json.load(open(BASE + '/data/calib.json'))
 osx, osy, otx, oty = calib['t']
 RAD = math.pi / 180
+def is_speckle(comp):
+    """Compact stray dot: small area AND small extent (keeps thin boundary fringes)."""
+    ys_, xs_ = np.nonzero(comp)
+    return comp.sum() <= 9 and (ys_.max()-ys_.min()+1) <= 3.5 and (xs_.max()-xs_.min()+1) <= 3.5
 def mercY(lat): return math.log(math.tan(math.pi/4 + lat*RAD/2)) / RAD
 def invMercY(y): return (2*math.atan(math.exp(y*RAD)) - math.pi/2) / RAD
 def to_px(lon, lat): return (lon*osx + otx, oty - mercY(lat)*osy)
@@ -221,13 +225,45 @@ for t in data['territories']:
     unknown = res < 0
     suspect = (~unknown) & ndimage.binary_dilation(unknown, iterations=2)
     res[suspect] = -1
+    # remove speckle: tiny isolated shade islands (anti-alias remnants of the
+    # original's dots/hatching) — they render as stray dots, not real fill
+    for _si in range(len(shades)):
+        _sm = (res == _si)
+        if not _sm.any(): continue
+        _lab, _n = ndimage.label(_sm)
+        for _li in range(1, _n + 1):
+            _comp = _lab == _li
+            if is_speckle(_comp):
+                res[_comp] = -1
     known = res >= 0
     thr = 0.02 if mask.sum() < 2000 else (0.10 if mask.sum() < 1500 else 0.15)
     if known.sum() < thr * mask.sum():
         report.append((tid, 'too few classified', '-', '-'))
         continue
-    res = clean_index(res)
+    raw_known = res >= 0          # genuinely classified (post suspect/speckle pass 1)
+    res = clean_index(res)        # nearest-fill the rest
     res[~mask] = -1
+    counts = np.bincount(res[mask].astype(int), minlength=len(shades))
+    order = np.argsort(counts)[::-1]
+    base_i = int(order[0])
+    share = counts[base_i] / counts.sum()
+    # pass 2: drop tiny fragments created purely by nearest-fill (no ground-truth
+    # pixels inside) — these render as stray dots; fold them into the base shade
+    for _si in range(len(shades)):
+        if _si == base_i: continue
+        _sm = (res == _si)
+        if not _sm.any(): continue
+        _lab, _n = ndimage.label(_sm)
+        for _li in range(1, _n + 1):
+            _comp = _lab == _li
+            if is_speckle(_comp) and not (_comp & raw_known).any():
+                res[_comp] = base_i
+    
+    counts = np.bincount(res[mask].astype(int), minlength=len(shades))
+    order = np.argsort(counts)[::-1]
+    base_i = int(order[0])
+    share = counts[base_i] / counts.sum()
+    # recompute counts after pass-2 folding
     counts = np.bincount(res[mask].astype(int), minlength=len(shades))
     order = np.argsort(counts)[::-1]
     base_i = int(order[0])

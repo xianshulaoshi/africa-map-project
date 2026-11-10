@@ -260,6 +260,7 @@ def serialize_geom(g, min_area=0.003):
     return out
 
 for t in data['territories']:
+    t.pop('zones', None)  # always reset — never leak zones from a previous run
     if t['id'] in MEASURED and MEASURED[t['id']]['zones']:
         t['zones'] = MEASURED[t['id']]['zones']
     elif t['id'] in ZONES:

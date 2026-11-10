@@ -14,6 +14,10 @@ H, W = img.shape[:2]
 calib = json.load(open(BASE + '/data/calib.json'))
 osx, osy, otx, oty = calib['t']
 RAD = math.pi / 180
+def is_speckle(comp):
+    """Compact stray dot: small area AND small extent (keeps thin boundary fringes)."""
+    ys_, xs_ = np.nonzero(comp)
+    return comp.sum() <= 9 and (ys_.max()-ys_.min()+1) <= 3.5 and (xs_.max()-xs_.min()+1) <= 3.5
 def mercY(lat): return math.log(math.tan(math.pi/4 + lat*RAD/2)) / RAD
 def to_px(lon, lat): return (lon*osx + otx, oty - mercY(lat)*sy if False else oty - mercY(lat)*osy)
 
@@ -145,6 +149,15 @@ for t in data['territories']:
     # exclude text-halo contamination: classified pixels within 2px of unknown
     unk = orig_idx < 0
     orig_idx[(orig_idx >= 0) & ndimage.binary_dilation(unk, iterations=2)] = -1
+    # exclude speckle: tiny isolated islands of a shade (same rule as measurement)
+    for _si in range(len(shades)):
+        _sm = (orig_idx == _si)
+        if not _sm.any(): continue
+        _lab, _n = ndimage.label(_sm)
+        for _li in range(1, _n + 1):
+            _comp = _lab == _li
+            if is_speckle(_comp):
+                orig_idx[_comp] = -1
     known = orig_idx >= 0
     ambig = int((orig_idx == -2).sum())
     n = int(known.sum())
