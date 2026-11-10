@@ -37,7 +37,12 @@ const POWERS = {
   ot:  { fr: 'Empire ottoman',    zh: '奥斯曼帝国', color: '#88c8b8', swatches: ['#88c8b8', '#88c8b8', '#88c8b8'] },
   indep: { fr: 'État indépendant', zh: '独立国家',  color: '#d8d4ca', swatches: ['#d8d4ca', '#d8d4ca', '#d8d4ca'] },
 };
-const ERA_LABEL = { '1870': '1870 年前获得', '1900': '1870–1900 年间获得', '1914': '1900–1914 年间获得' };
+const ERA_LABEL = {
+  '1870': '1870 年前获得',
+  '1900': '1870–1900 年间获得',
+  '1914': '1900–1914 年间获得',
+  'zones': '分区内按占领时期分色（深→浅 = 1870→1914，与原图一致）',
+};
 
 // leader-label offsets (screen px) for small territories: [dx, dy]
 const LEADER = {
@@ -101,6 +106,26 @@ for (const t of D.territories) {
   p.addEventListener('pointerenter', () => hover(t));
   p.addEventListener('pointerleave', unhover);
   p.addEventListener('click', (ev) => { ev.stopPropagation(); toggleSel(t.id); });
+}
+// era zones: sub-region shades painted on top of the base fill (as in the original);
+// they never catch pointer events, so hover/click keep working through the base path
+const zoneEls = {}, outlineEls = {};
+for (const t of D.territories) {
+  if (!t.zones) continue;
+  for (const z of t.zones) {
+    const zp = el('path', {
+      d: pathD(z.geometry),
+      class: 'terr-zone', fill: z.fill,
+      'pointer-events': 'none', 'vector-effect': 'non-scaling-stroke',
+    }, gTerr);
+    zp.dataset.id = t.id;
+    (zoneEls[t.id] = zoneEls[t.id] || []).push(zp);
+  }
+  // re-draw the outline above the zones so borders / selection stay crisp
+  outlineEls[t.id] = el('path', {
+    d: pathD(t.geometry), class: 'terr-outline', fill: 'none',
+    'pointer-events': 'none', 'vector-effect': 'non-scaling-stroke',
+  }, gTerr);
 }
 for (const l of D.lakes) el('path', { d: pathD(l.geometry), class: 'lake', 'vector-effect': 'non-scaling-stroke' }, gLakes);
 for (const r of D.rivers) {
@@ -338,6 +363,7 @@ function toggleSel(id, fly) {
 }
 function syncSelection() {
   for (const id in terrEls) terrEls[id].classList.toggle('selected', selected.has(id));
+  for (const id in outlineEls) outlineEls[id].classList.toggle('selected', selected.has(id));
   document.getElementById('selCount').textContent = selected.size;
   renderDetail();
   renderList();
@@ -351,6 +377,7 @@ function syncSelection() {
 }
 function hover(t) {
   svg.classList.add('hovering');
+  if (outlineEls[t.id]) outlineEls[t.id].classList.add('hovered');
   const P = POWERS[t.power];
   tooltip.hidden = false;
   tooltip.innerHTML =
@@ -359,7 +386,10 @@ function hover(t) {
     `<span class="tt-power" style="background:${P.color};color:#fff">${esc(P.fr)} ${esc(P.zh)}</span>` +
     (t.status ? `<div class="tt-zh" style="margin-top:3px">${esc(t.status)}</div>` : '');
 }
-function unhover() { svg.classList.remove('hovering'); tooltip.hidden = true; }
+function unhover() {
+  svg.classList.remove('hovering'); tooltip.hidden = true;
+  document.querySelectorAll('.terr-outline.hovered').forEach(e => e.classList.remove('hovered'));
+}
 document.addEventListener('pointermove', (ev) => {
   if (tooltip.hidden) return;
   const wrap = document.getElementById('mapWrap').getBoundingClientRect();
@@ -377,6 +407,7 @@ function setFilter(power) {
   for (const t of D.territories) {
     const dim = filterPower && t.power !== filterPower;
     terrEls[t.id].classList.toggle('dimmed', dim);
+    if (zoneEls[t.id]) zoneEls[t.id].forEach(z => z.style.opacity = dim ? 0.15 : 1);
     const L = labelRefs[t.id];
     if (L) { L.main.style.opacity = dim ? 0.15 : 1; if (L.sub) L.sub.style.opacity = dim ? 0.15 : 1; if (L.leader) L.leader.style.opacity = dim ? 0.15 : 1; }
   }

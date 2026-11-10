@@ -193,3 +193,8 @@ body {
   #topbar h1 { font-size: 15px; }
   #search { width: 150px; }
 }
+
+.terr-zone { stroke: none; }
+.terr-outline { stroke: #46586e; stroke-width: .5; fill: none; pointer-events: none; }
+.terr-outline.hovered { stroke: #1d2b3a; stroke-width: 1.1; }
+.terr-outline.selected { stroke: #101d2b; stroke-width: 1.4; filter: url(#selGlow); }
