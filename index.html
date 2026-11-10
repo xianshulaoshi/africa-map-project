@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>非洲殖民扩张 1870–1914 · 交互地图</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="title-block">
+    <h1>L’EXPANSION COLONIALE EN AFRIQUE</h1>
+    <div class="subtitle">非洲殖民扩张 · 1870–1914 <span class="sep">·</span> 交互地图 <span class="hint">点击地图上的区域可选中 · 支持多选 / 缩放 / 搜索</span></div>
+  </div>
+  <div class="top-actions">
+    <input id="search" type="search" placeholder="搜索区域 / 城市（中/法/英）…" autocomplete="off">
+    <button id="btnClearSel" class="btn" title="清除所有选中">清除选中 (<span id="selCount">0</span>)</button>
+  </div>
+</header>
+
+<div id="layout">
+  <aside id="sidebar">
+    <section class="panel" id="legendPanel">
+      <h2>Territoires sous domination <span class="zh-h">列强领地 · 色块 = 获得时期（1870 深 → 1914 浅）</span></h2>
+      <div id="legend"></div>
+      <div class="legend-note">
+        <div class="lg-row"><span class="sw indep"></span>État indépendant 独立国家</div>
+        <div class="lg-row"><span class="sw line1914"></span>Frontière en 1914 · 1914年边界</div>
+      </div>
+    </section>
+
+    <section class="panel" id="listPanel">
+      <h2>区域列表 <span id="listCount"></span></h2>
+      <div id="terrList"></div>
+    </section>
+
+    <section class="panel" id="detailPanel">
+      <h2>选中详情</h2>
+      <div id="detail" class="empty">尚未选择区域<br><small>点击地图或列表选择一个区域；按住 Ctrl 可多选；再次点击取消。</small></div>
+      <div id="multiSummary" class="multi-summary" hidden></div>
+    </section>
+
+    <section class="panel source">
+      <h2>关于本图</h2>
+      <p>交互改编自：<br><span class="fr">Source : C. Lizzano, « Déclin et fin de la colonisation française », Paris, Larousse, 2007.</span></p>
+      <p class="note">边界为 1914 年状态。法属西非（AOF）与法属赤道非洲（AEF）的内部各殖民地界线、罗得西亚分界按现代国界近似绘制；利比亚按原图以奥斯曼色标示（1911–12 意土战争后意大利占领）。</p>
+    </section>
+  </aside>
+
+  <main id="mapWrap">
+    <svg id="map" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="oceanGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#eef2f8"/>
+          <stop offset="42%" stop-color="#c3d8ec"/>
+          <stop offset="70%" stop-color="#bcd6ec"/>
+          <stop offset="100%" stop-color="#e0eaf4"/>
+        </linearGradient>
+        <pattern id="indepStipple" width="6" height="6" patternUnits="userSpaceOnUse">
+          <rect width="6" height="6" fill="#e8e6e0"/>
+          <circle cx="1.4" cy="1.4" r="0.75" fill="#9a948a"/>
+          <circle cx="4.4" cy="4.4" r="0.75" fill="#9a948a"/>
+        </pattern>
+        <filter id="selGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#1d2b3a" flood-opacity="0.45"/>
+        </filter>
+      </defs>
+      <rect id="ocean" fill="url(#oceanGrad)"/>
+      <g id="viewport">
+        <g id="gGraticule"></g>
+        <g id="gContext"></g>
+        <g id="gTerr"></g>
+        <g id="gLakes"></g>
+        <g id="gRivers"></g>
+      </g>
+      <g id="overlay"></g>
+    </svg>
+    <div id="controls">
+      <button id="zoomIn" class="btn ctl" title="放大">＋</button>
+      <button id="zoomOut" class="btn ctl" title="缩小">－</button>
+      <button id="zoomReset" class="btn ctl" title="复位">⟲</button>
+    </div>
+    <div id="scaleBar"><div id="scaleBarLine"></div><span id="scaleBarText"></span></div>
+    <div id="tooltip" hidden></div>
+    <div id="kbdHint">滚轮缩放 · 拖拽平移 · 点击选中，再点取消</div>
+  </main>
+</div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
