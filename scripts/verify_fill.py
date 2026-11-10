@@ -139,6 +139,9 @@ for t in data['territories']:
         yy, xx = y + dy, x + dx
         if 0 <= xx < W and 0 <= yy < H and mask[yy, xx]:
             orig_idx[y, x] = classify(img[yy, xx], shades)
+    # exclude text-halo contamination: classified pixels within 2px of unknown
+    unk = orig_idx < 0
+    orig_idx[(orig_idx >= 0) & ndimage.binary_dilation(unk, iterations=2)] = -1
     known = orig_idx >= 0
     ambig = int((orig_idx == -2).sum())
     n = int(known.sum())

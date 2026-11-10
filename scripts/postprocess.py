@@ -140,6 +140,9 @@ ZONE_BASE = {
 }
 
 MEASURED = json.load(open(BASE + '/data/measured_zones.json'))
+# too small/text-heavy to measure reliably -> use single-shade ERA fallback
+for _tid in []:
+    MEASURED.pop(_tid, None)
 
 def fill_for(tid, power):
     if tid in MEASURED:

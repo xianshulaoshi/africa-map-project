@@ -189,8 +189,14 @@ for t in data['territories']:
         report.append((tid, 'low-conf %.2f' % f, dx, dy))
         # still proceed with best shift; fallback handled by single-shade rule
     res = shade_index(mask, shades, dx, dy)
+    # text/rivers/borders contaminate nearby pixels (anti-aliased halos classify into
+    # wrong shades, leaving letter-shaped blobs). Discard classified pixels within
+    # 2px of any unknown pixel; they are inpainted from solid fill by nearest fill.
+    unknown = res < 0
+    suspect = (~unknown) & ndimage.binary_dilation(unknown, iterations=2)
+    res[suspect] = -1
     known = res >= 0
-    thr = 0.05 if mask.sum() < 700 else (0.10 if mask.sum() < 1500 else 0.15)
+    thr = 0.02 if mask.sum() < 1000 else (0.05 if mask.sum() < 700 else (0.10 if mask.sum() < 1500 else 0.15))
     if known.sum() < thr * mask.sum():
         report.append((tid, 'too few classified', dx, dy))
         continue
