@@ -239,6 +239,9 @@ function clampView() {
 function applyView() {
   clampView();
   const sc = view.S * view.k;
+  // keep the independent-state stipple at constant SCREEN size (tile ~7px, dot ~0.9px)
+  const stipple = document.getElementById('indepStipple');
+  if (stipple) stipple.setAttribute('patternTransform', `scale(${(7 / (6 * sc)).toFixed(4)})`);
   // screen = W/2 + (u + tx - U_W/2) * sc  =>  translate = W/2 + (tx - U_W/2) * sc
   viewport.setAttribute('transform',
     `translate(${(view.W / 2 + (view.tx - U_W / 2) * sc).toFixed(2)},${(view.H / 2 + (view.ty - U_H / 2) * sc).toFixed(2)}) scale(${sc.toFixed(4)})`);
