@@ -42,6 +42,7 @@ const ERA_LABEL = {
   '1900': '1870–1900 年间获得',
   '1914': '1900–1914 年间获得',
   'zones': '分区内按占领时期分色（深→浅 = 1870→1914，与原图一致）',
+  'measured': '按原图逐像素测量的分档填色（深→浅 = 1870→1914）',
 };
 
 // leader-label offsets (screen px) for small territories: [dx, dy]
@@ -116,6 +117,7 @@ for (const t of D.territories) {
     const zp = el('path', {
       d: pathD(z.geometry),
       class: 'terr-zone', fill: z.fill,
+      'fill-rule': 'evenodd',
       'pointer-events': 'none', 'vector-effect': 'non-scaling-stroke',
     }, gTerr);
     zp.dataset.id = t.id;

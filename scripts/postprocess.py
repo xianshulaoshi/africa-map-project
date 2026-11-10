@@ -139,7 +139,11 @@ ZONE_BASE = {
     'angola': '#a0a858', 'mozambique': '#c0d080',
 }
 
+MEASURED = json.load(open(BASE + '/data/measured_zones.json'))
+
 def fill_for(tid, power):
+    if tid in MEASURED:
+        return MEASURED[tid]['base'], 'measured'
     era = ERA.get(tid, '1900')
     if era == 'ot1900':
         return '#88c8b8', 'ot'
@@ -253,7 +257,9 @@ def serialize_geom(g, min_area=0.003):
     return out
 
 for t in data['territories']:
-    if t['id'] in ZONES:
+    if t['id'] in MEASURED and MEASURED[t['id']]['zones']:
+        t['zones'] = MEASURED[t['id']]['zones']
+    elif t['id'] in ZONES:
         geom = t.get('_polys', [None])[0]
         zones = []
         if geom is not None:

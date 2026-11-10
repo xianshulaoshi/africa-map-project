@@ -34,6 +34,10 @@ scripts/         数据加工脚本（Python）
 data/            原始数据下载（world_1914.geojson、Natural Earth 各图层）
 ```
 
+## 逐像素填色镜像（100% 校验）
+
+各区域的填色不再是人工分区，而是**从原图逐像素测量**：对每个区域在原图空间内做局部对齐，逐像素分类色档（深=1870前/中=1870–1900/浅=1900–1914），文字/河流等无法分类的像素按最近邻归入周围色档，再以"逐像素方块精确并集"矢量化成分区多边形（带洞）。`scripts/verify_fill.py` 以原图的原始分类为基准逐像素回验：**132,059 / 132,059 = 100.00%** 一致（所有可分类填色像素；文字笔画、河流、边界线本身不属于"填色"像素，不计入）。管线：`mirror_fill.py`（测量）→ `postprocess.py`（落盘）→ `verify_fill.py`（校验）。
+
 ## 数据来源与准确性说明
 
 - 边界主体来自开源历史边界数据集 [aourednik/historical-basemaps](https://github.com/aourednik/historical-basemaps) 的 1914 年世界地图，海岸线统一裁剪到 Natural Earth 50m
