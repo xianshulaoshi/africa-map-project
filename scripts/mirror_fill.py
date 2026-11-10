@@ -34,14 +34,14 @@ def to_ll(x, y): return ((x - otx)/osx, invMercY((oty - y)/osy))
 
 # shade palettes per power: name -> hex + rgb
 PAL = {
- 'fr': [('deep', '#0878b8', (0x08,0x78,0xb8)), ('mid', '#4890c8', (0x48,0x90,0xc8)), ('light', '#88b8e0', (0x88,0xb8,0xe0))],
- 'uk': [('deep', '#a060a0', (0xa0,0x60,0xa0)), ('mid', '#c088b8', (0xc0,0x88,0xb8)), ('light', '#e0a8c8', (0xe0,0xa8,0xc8))],
- 'de': [('mid', '#689878', (0x68,0x98,0x78)), ('light', '#90b8a0', (0x90,0xb8,0xa0))],
- 'be': [('mid', '#d0a838', (0xd0,0xa8,0x38))],
- 'pt': [('deep', '#788838', (0x78,0x88,0x38)), ('mid', '#a0a858', (0xa0,0xa8,0x58)), ('light', '#c0d080', (0xc0,0xd0,0x80))],
- 'es': [('deep', '#b86818', (0xb8,0x68,0x18)), ('mid', '#d88830', (0xd8,0x88,0x30)), ('light', '#f8b058', (0xf8,0xb0,0x58))],
- 'it': [('mid', '#b0a068', (0xb0,0xa0,0x68)), ('light', '#d0c088', (0xd0,0xc0,0x88))],
- 'ot': [('mid', '#88c8b8', (0x88,0xc8,0xb8)), ('light', '#d0c088', (0xd0,0xc0,0x88))],
+ 'fr': [('deep', '#0c78b9', (0x0c,0x78,0xb9)), ('mid', '#4a97cd', (0x4a,0x97,0xcd)), ('light', '#8abbe3', (0x8a,0xbb,0xe3))],
+ 'uk': [('deep', '#a664a2', (0xa6,0x64,0xa2)), ('mid', '#c288b8', (0xc2,0x88,0xb8)), ('light', '#e2afce', (0xe2,0xaf,0xce))],
+ 'de': [('mid', '#689a7f', (0x68,0x9a,0x7f)), ('light', '#90bca5', (0x90,0xbc,0xa5))],
+ 'be': [('mid', '#d7af3d', (0xd7,0xaf,0x3d))],
+ 'pt': [('deep', '#7e8d3a', (0x7e,0x8d,0x3a)), ('mid', '#a1af5a', (0xa1,0xaf,0x5a)), ('light', '#c4d181', (0xc4,0xd1,0x81))],
+ 'es': [('deep', '#bc6b1a', (0xbc,0x6b,0x1a)), ('mid', '#dc8f37', (0xdc,0x8f,0x37)), ('light', '#f8b55a', (0xf8,0xb5,0x5a))],
+ 'it': [('mid', '#b7a168', (0xb7,0xa1,0x68)), ('light', '#d6c68e', (0xd6,0xc6,0x8e))],
+ 'ot': [('mid', '#8fcabb', (0x8f,0xca,0xbb)), ('light', '#d6c68e', (0xd6,0xc6,0x8e))],
 }
 SPECIAL = {'gray': ('#9090a0', (0x90,0x90,0xa0))}
 
@@ -51,7 +51,7 @@ def allowed_shades(t):
         out.append(('boer', *SPECIAL['gray']))
     return out
 
-TOL = 44  # per-channel sum tolerance
+TOL = 50  # per-channel sum tolerance (own-family shades only; nearest + ambiguity gap keeps safety)
 
 def classify(rgb, shades):
     """Nearest shade within TOL; -2 if two shades nearly equidistant (ambiguous)."""
@@ -84,37 +84,63 @@ def territory_mask(t):
     mask = ndimage.binary_erosion(mask, iterations=1)
     return mask
 
-def best_shift(mask, shades, max_shift=10):
-    ys, xs = np.nonzero(mask)
-    if len(xs) == 0: return (0, 0, 0.0)
-    idx = np.linspace(0, len(xs)-1, min(400, len(xs))).astype(int)
-    sx_, sy_ = xs[idx], ys[idx]
-    def score(dx, dy):
-        """# of sample points that classify into our family AND stay inside the mask."""
-        ok = 0
-        for x, y in zip(sx_+dx, sy_+dy):
-            if 0 <= x < W and 0 <= y < H and mask[y, x]:
-                if classify(img[y, x], shades) >= 0: ok += 1
-        return ok / len(sx_)
-    best = (score(0, 0), 0, 0)
-    for r in [5, 2, 1]:
-        cand = best
-        for dy in range(max(-max_shift, cand[2]-r), min(max_shift, cand[2]+r)+1, 1):
-            for dx in range(max(-max_shift, cand[1]-r), min(max_shift, cand[1]+r)+1, 1):
-                s = score(dx, dy)
-                if s > cand[0]: cand = (s, dx, dy)
-        best = cand
-    return best[1], best[2], best[0]
+def _aff_apply(aff, x, y):
+    c00, c01, t0, c10, c11, t1 = aff
+    return (c00*x + c01*y + t0, c10*x + c11*y + t1)
 
-def shade_index(mask, shades, dx, dy):
-    """Classify all mask pixels (sampled with shift) -> int array, -1 unknown.
-    Samples landing outside the territory mask are treated as unknown."""
+def _aff_from(sx, sy, rot, dx, dy):
+    import math as _m
+    r = _m.radians(rot)
+    return (_m.cos(r)*sx, -_m.sin(r)*sx, dx, _m.sin(r)*sy, _m.cos(r)*sy, dy)
+
+def fit_affine(mask, shades, max_shift=10):
+    """Per-territory affine (translation + anisotropic scale + small rotation)
+    maximising family agreement of samples that stay inside the mask."""
+    ys, xs = np.nonzero(mask)
+    if len(xs) == 0: return (1, 0, 0, 0, 1, 0), 0.0
+    idx = np.linspace(0, len(xs)-1, min(350, len(xs))).astype(int)
+    sx_, sy_ = xs[idx].astype(float), ys[idx].astype(float)
+    def score(sx, sy, rot, dx, dy):
+        aff = _aff_from(sx, sy, rot, dx, dy)
+        ok = 0
+        for x, y in zip(sx_, sy_):
+            u, v = _aff_apply(aff, x, y)
+            ui, vi = int(round(u)), int(round(v))
+            if 0 <= ui < W and 0 <= vi < H and mask[vi, ui]:
+                if classify(img[vi, ui], shades) >= 0: ok += 1
+        return ok / len(sx_)
+    best = {'s': score(1, 1, 0, 0, 0), 'sx': 1, 'sy': 1, 'r': 0, 'dx': 0, 'dy': 0}
+    for r_ in [4, 2, 1]:
+        cand = dict(best)
+        for dy in range(-max_shift, max_shift+1):
+            for dx in range(-max_shift, max_shift+1):
+                if abs(dx-best['dx']) > r_ or abs(dy-best['dy']) > r_: continue
+                s = score(best['sx'], best['sy'], best['r'], dx, dy)
+                if s > cand['s']: cand = {'s': s, 'sx': best['sx'], 'sy': best['sy'], 'r': best['r'], 'dx': dx, 'dy': dy}
+        best = cand
+    if mask.sum() >= 400:
+        for r_ in [0.02, 0.01, 0.005]:
+            cand = dict(best)
+            for dsa in (-1, 0, 1):
+                for dsb in (-1, 0, 1):
+                    for dr in (-1, 0, 1):
+                        sx2 = best['sx']*(1+dsa*r_); sy2 = best['sy']*(1+dsb*r_); r2 = best['r'] + dr*r_*30
+                        if abs(sx2-1) > 0.05 or abs(sy2-1) > 0.05 or abs(r2) > 1.5: continue
+                        s = score(sx2, sy2, r2, best['dx'], best['dy'])
+                        if s > cand['s']: cand = {'s': s, 'sx': sx2, 'sy': sy2, 'r': r2, 'dx': best['dx'], 'dy': best['dy']}
+            best = cand
+    aff = _aff_from(best['sx'], best['sy'], best['r'], best['dx'], best['dy'])
+    return aff, best['s']
+
+def shade_index(mask, shades, aff):
+    """Classify mask pixels by sampling the original through the local affine."""
     res = np.full(mask.shape, -1, np.int8)
     ys, xs = np.nonzero(mask)
     for y, x in zip(ys, xs):
-        yy, xx = y+dy, x+dx
-        if 0 <= xx < W and 0 <= yy < H and mask[y, x] and mask[yy, xx]:
-            res[y, x] = classify(img[yy, xx], shades)
+        u, v = _aff_apply(aff, x, y)
+        ui, vi = int(round(u)), int(round(v))
+        if 0 <= ui < W and 0 <= vi < H and mask[vi, ui]:
+            res[y, x] = classify(img[vi, ui], shades)
     return res
 
 def clean_index(res):
@@ -184,11 +210,11 @@ for t in data['territories']:
     if mask.sum() < 25:
         report.append((tid, 'tiny', 0, 0))
         continue
-    dx, dy, f = best_shift(mask, shades)
-    if f < 0.45:
-        report.append((tid, 'low-conf %.2f' % f, dx, dy))
-        # still proceed with best shift; fallback handled by single-shade rule
-    res = shade_index(mask, shades, dx, dy)
+    aff, f = fit_affine(mask, shades)
+    if f < 0.45 and mask.sum() >= 2000:
+        report.append((tid, 'low-conf %.2f' % f, '-', '-'))
+        # still proceed; fallback handled by single-shade rule
+    res = shade_index(mask, shades, aff)
     # text/rivers/borders contaminate nearby pixels (anti-aliased halos classify into
     # wrong shades, leaving letter-shaped blobs). Discard classified pixels within
     # 2px of any unknown pixel; they are inpainted from solid fill by nearest fill.
@@ -196,9 +222,9 @@ for t in data['territories']:
     suspect = (~unknown) & ndimage.binary_dilation(unknown, iterations=2)
     res[suspect] = -1
     known = res >= 0
-    thr = 0.02 if mask.sum() < 1000 else (0.05 if mask.sum() < 700 else (0.10 if mask.sum() < 1500 else 0.15))
+    thr = 0.02 if mask.sum() < 2000 else (0.10 if mask.sum() < 1500 else 0.15)
     if known.sum() < thr * mask.sum():
-        report.append((tid, 'too few classified', dx, dy))
+        report.append((tid, 'too few classified', '-', '-'))
         continue
     res = clean_index(res)
     res[~mask] = -1
@@ -229,8 +255,8 @@ for t in data['territories']:
         zones.sort(key=lambda z: -z['_area'])  # painter order: big first, islands on top
         for z in zones: z.pop('_area', None)
     results[tid] = {'base': shades[base_i][1], 'baseName': shades[base_i][0], 'zones': zones,
-                    'shift': [dx, dy], 'conf': round(float(f), 2)}
-    report.append((tid, f'base={shades[base_i][0]} {share:.0%}', f'zones={len(zones)}', f'shift=({dx},{dy})'))
+                    'aff': [round(v, 5) for v in aff], 'conf': round(float(f), 2)}
+    report.append((tid, f'base={shades[base_i][0]} {share:.0%}', f'zones={len(zones)}', f'aff=({aff[2]:.1f},{aff[5]:.1f})'))
 
 json.dump(results, open(BASE + '/data/measured_zones.json', 'w'))
 print('%-13s %-22s %-12s %s' % ('id', 'base', 'zones', 'shift'))

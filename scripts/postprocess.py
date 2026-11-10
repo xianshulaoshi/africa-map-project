@@ -6,16 +6,16 @@ from shapely.geometry import Polygon, Point
 
 BASE = '/Users/weiaiwen1/Desktop/my-space/map-project'
 
-# palette from the original map legend (segments 1870 / 1900 / 1914)
+# palette measured as median RGB of solid fill areas of the original map
 PAL = {
-    'fr': {'1870': '#0878b8', '1900': '#4890c8', '1914': '#88b8e0'},
-    'uk': {'1870': '#a060a0', '1900': '#c088b8', '1914': '#e0a8c8'},
-    'de': {'1870': None,      '1900': '#689878', '1914': '#90b8a0'},
-    'be': {'1870': None,      '1900': '#d0a838', '1914': '#d0a838'},
-    'pt': {'1870': '#788838', '1900': '#a0a858', '1914': '#c0d080'},
-    'es': {'1870': '#b86818', '1900': '#d88830', '1914': '#f8b058'},
-    'it': {'1870': None,      '1900': '#b0a068', '1914': '#d0c088'},
-    'ot': {'1870': None,      '1900': '#88c8b8', '1914': '#88c8b8'},
+    'fr': {'1870': '#0c78b9', '1900': '#4a97cd', '1914': '#8abbe3'},
+    'uk': {'1870': '#a664a2', '1900': '#c288b8', '1914': '#e2afce'},
+    'de': {'1870': None,      '1900': '#689a7f', '1914': '#90bca5'},
+    'be': {'1870': None,      '1900': '#d7af3d', '1914': '#d7af3d'},
+    'pt': {'1870': '#7e8d3a', '1900': '#a1af5a', '1914': '#c4d181'},
+    'es': {'1870': '#bc6b1a', '1900': '#dc8f37', '1914': '#f8b55a'},
+    'it': {'1870': None,      '1900': '#b7a168', '1914': '#d6c68e'},
+    'ot': {'1870': None,      '1900': '#8fcabb', '1914': '#8fcabb'},
     'indep': {'1870': '#e8e6e0', '1900': '#e8e6e0', '1914': '#e8e6e0'},
 }
 
@@ -149,7 +149,7 @@ def fill_for(tid, power):
         return MEASURED[tid]['base'], 'measured'
     era = ERA.get(tid, '1900')
     if era == 'ot1900':
-        return '#88c8b8', 'ot'
+        return '#8fcabb', 'ot'
     if era == 'indep':
         return PAL['indep']['1900'], 'indep'
     if era == 'zones':

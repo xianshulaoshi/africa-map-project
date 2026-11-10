@@ -27,14 +27,14 @@ const U_W = FRAME.lon1 - FRAME.lon0;
 const U_H = uy(FRAME.lat1);
 
 const POWERS = {
-  fr:  { fr: 'France',            zh: '法国',       color: '#4890c8', swatches: ['#0878b8', '#4890c8', '#88b8e0'] },
-  uk:  { fr: 'Royaume-Uni',       zh: '英国',       color: '#c088b8', swatches: ['#a060a0', '#c088b8', '#e0a8c8'] },
-  de:  { fr: 'Allemagne',         zh: '德国',       color: '#689878', swatches: ['#689878', '#689878', '#90b8a0'] },
-  be:  { fr: 'Belgique',          zh: '比利时',     color: '#d0a838', swatches: ['#d0a838', '#d0a838', '#d0a838'] },
-  pt:  { fr: 'Portugal',          zh: '葡萄牙',     color: '#a0a858', swatches: ['#788838', '#a0a858', '#c0d080'] },
-  es:  { fr: 'Espagne',           zh: '西班牙',     color: '#d88830', swatches: ['#b86818', '#d88830', '#f8b058'] },
-  it:  { fr: 'Italie',            zh: '意大利',     color: '#b0a068', swatches: ['#b0a068', '#b0a068', '#d0c088'] },
-  ot:  { fr: 'Empire ottoman',    zh: '奥斯曼帝国', color: '#88c8b8', swatches: ['#88c8b8', '#88c8b8', '#88c8b8'] },
+  fr:  { fr: 'France',            zh: '法国',       color: '#4a97cd', swatches: ['#0c78b9', '#4a97cd', '#8abbe3'] },
+  uk:  { fr: 'Royaume-Uni',       zh: '英国',       color: '#c288b8', swatches: ['#a664a2', '#c288b8', '#e2afce'] },
+  de:  { fr: 'Allemagne',         zh: '德国',       color: '#689a7f', swatches: ['#689a7f', '#689a7f', '#90bca5'] },
+  be:  { fr: 'Belgique',          zh: '比利时',     color: '#d7af3d', swatches: ['#d7af3d', '#d7af3d', '#d7af3d'] },
+  pt:  { fr: 'Portugal',          zh: '葡萄牙',     color: '#a1af5a', swatches: ['#7e8d3a', '#a1af5a', '#c4d181'] },
+  es:  { fr: 'Espagne',           zh: '西班牙',     color: '#dc8f37', swatches: ['#bc6b1a', '#dc8f37', '#f8b55a'] },
+  it:  { fr: 'Italie',            zh: '意大利',     color: '#b7a168', swatches: ['#b7a168', '#b7a168', '#d6c68e'] },
+  ot:  { fr: 'Empire ottoman',    zh: '奥斯曼帝国', color: '#8fcabb', swatches: ['#8fcabb', '#8fcabb', '#8fcabb'] },
   indep: { fr: 'État indépendant', zh: '独立国家',  color: '#d8d4ca', swatches: ['#d8d4ca', '#d8d4ca', '#d8d4ca'] },
 };
 const ERA_LABEL = {

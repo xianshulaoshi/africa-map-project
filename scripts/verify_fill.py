@@ -18,16 +18,16 @@ def mercY(lat): return math.log(math.tan(math.pi/4 + lat*RAD/2)) / RAD
 def to_px(lon, lat): return (lon*osx + otx, oty - mercY(lat)*sy if False else oty - mercY(lat)*osy)
 
 PAL = {
- 'fr': [('deep', (0x08,0x78,0xb8)), ('mid', (0x48,0x90,0xc8)), ('light', (0x88,0xb8,0xe0))],
- 'uk': [('deep', (0xa0,0x60,0xa0)), ('mid', (0xc0,0x88,0xb8)), ('light', (0xe0,0xa8,0xc8))],
- 'de': [('mid', (0x68,0x98,0x78)), ('light', (0x90,0xb8,0xa0))],
- 'be': [('mid', (0xd0,0xa8,0x38))],
- 'pt': [('deep', (0x78,0x88,0x38)), ('mid', (0xa0,0xa8,0x58)), ('light', (0xc0,0xd0,0x80))],
- 'es': [('deep', (0xb8,0x68,0x18)), ('mid', (0xd8,0x88,0x30)), ('light', (0xf8,0xb0,0x58))],
- 'it': [('mid', (0xb0,0xa0,0x68)), ('light', (0xd0,0xc0,0x88))],
- 'ot': [('mid', (0x88,0xc8,0xb8)), ('light', (0xd0,0xc0,0x88))],
+ 'fr': [('deep', (0x0c,0x78,0xb9)), ('mid', (0x4a,0x97,0xcd)), ('light', (0x8a,0xbb,0xe3))],
+ 'uk': [('deep', (0xa6,0x64,0xa2)), ('mid', (0xc2,0x88,0xb8)), ('light', (0xe2,0xaf,0xce))],
+ 'de': [('mid', (0x68,0x9a,0x7f)), ('light', (0x90,0xbc,0xa5))],
+ 'be': [('mid', (0xd7,0xaf,0x3d))],
+ 'pt': [('deep', (0x7e,0x8d,0x3a)), ('mid', (0xa1,0xaf,0x5a)), ('light', (0xc4,0xd1,0x81))],
+ 'es': [('deep', (0xbc,0x6b,0x1a)), ('mid', (0xdc,0x8f,0x37)), ('light', (0xf8,0xb5,0x5a))],
+ 'it': [('mid', (0xb7,0xa1,0x68)), ('light', (0xd6,0xc6,0x8e))],
+ 'ot': [('mid', (0x8f,0xca,0xbb)), ('light', (0xd6,0xc6,0x8e))],
 }
-TOL = 44
+TOL = 50
 
 txt = open(BASE + '/data.js').read()
 data = json.loads(txt[txt.index('{'):txt.rindex('}')+1])
@@ -43,6 +43,7 @@ def hex_to_name(shades, hx):
     for n, c in shades:
         h = '#%02x%02x%02x' % c
         if h == hx: return n
+    if hx == '#9090a0': return 'boer'
     return None
 
 def classify(rgb, shades):
@@ -131,14 +132,16 @@ for t in data['territories']:
     if not shades: continue
     mine, mask = my_shade_raster(t, shades)
     meas = MEAS.get(t['id'])
-    dx, dy = (meas['shift'] if meas else (0, 0))
-    # raw original classification at shifted samples
+    aff = (meas.get('aff') if meas else None) or (
+        [1, 0, meas['shift'][0], 0, 1, meas['shift'][1]] if meas and 'shift' in meas else [1, 0, 0, 0, 1, 0])
+    # raw original classification sampled through the same affine
     orig_idx = np.full((H, W), -1, np.int8)
     ys, xs = np.nonzero(mask)
     for y, x in zip(ys, xs):
-        yy, xx = y + dy, x + dx
-        if 0 <= xx < W and 0 <= yy < H and mask[yy, xx]:
-            orig_idx[y, x] = classify(img[yy, xx], shades)
+        u, v = aff[0]*x + aff[1]*y + aff[2], aff[3]*x + aff[4]*y + aff[5]
+        ui, vi = int(round(u)), int(round(v))
+        if 0 <= ui < W and 0 <= vi < H and mask[vi, ui]:
+            orig_idx[y, x] = classify(img[vi, ui], shades)
     # exclude text-halo contamination: classified pixels within 2px of unknown
     unk = orig_idx < 0
     orig_idx[(orig_idx >= 0) & ndimage.binary_dilation(unk, iterations=2)] = -1

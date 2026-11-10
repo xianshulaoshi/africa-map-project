@@ -1,0 +1,21 @@
+{
+ "fr-deep": "#0c78b9",
+ "fr-mid": "#4a97cd",
+ "fr-light": "#8abbe3",
+ "uk-deep": "#a664a2",
+ "uk-mid": "#c288b8",
+ "uk-light": "#e2afce",
+ "de-mid": "#689a7f",
+ "de-light": "#90bca5",
+ "be-mid": "#d7af3d",
+ "pt-deep": "#7e8d3a",
+ "pt-mid": "#a1af5a",
+ "pt-light": "#c4d181",
+ "es-deep": "#bc6b1a",
+ "es-mid": "#dc8f37",
+ "es-light": "#f8b55a",
+ "it-mid": "#b7a168",
+ "it-light": "#d6c68e",
+ "ot-mid": "#8fcabb",
+ "ot-light": "#d6c68e"
+}
